@@ -29,6 +29,8 @@ import com.facebook.react.modules.core.DeviceEventManagerModule;
 import java.util.HashMap;
 import java.util.Map;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import javax.annotation.Nullable;
 
 public class OrientationModule extends ReactContextBaseJavaModule implements LifecycleEventListener{
@@ -37,7 +39,9 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
     private Context ctx = getReactApplicationContext();
     private ContentResolver resolver = ctx.getContentResolver();
 
-    private boolean orientationEnabled = Settings.System.getInt(resolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1;
+    private AtomicBoolean orientationEnabled = new AtomicBoolean(
+        Settings.System.getInt(resolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1
+    );
 
     private ContentObserver observer;
 
@@ -63,31 +67,18 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
             }
         };
 
-        observer = new ContentObserver(new Handler(Looper.getMainLooper())) {
-           @Override
-           public void onChange(boolean selfChange) {
-               this.onChange(selfChange,null);
-               FLog.e(ReactConstants.TAG, "ContentObserver onChange 1");
-           }
+        observer = new SystemDisplayRotationLockObserver(orientationEnabled, resolver);
 
-           @Override
-           public void onChange(boolean selfChange, Uri uri) {
-               int value = Settings.System.getInt(resolver, Settings.System.ACCELEROMETER_ROTATION, 0);
-               FLog.e(ReactConstants.TAG, "ContentObserver onChange 2: " + value);
-               orientationEnabled = value == 1;
-           }
+       // Register a content observer to listen for system setting changes while
+       // this UI is active.
+       resolver.registerContentObserver(
+           Settings.System.getUriFor(System.ACCELEROMETER_ROTATION),
+           false,
+           observer
+       );
 
-           @Override
-           public boolean deliverSelfNotifications() {
-               return true;
-           }
-       };
-
-        resolver.registerContentObserver(
-            Settings.System.getUriFor(Settings.System.ACCELEROMETER_ROTATION),
-            true,
-            observer
-        );
+       // Initialize the UI once
+       observer.onChange(true);
 
         rCtx.addLifecycleEventListener(this);
     }
@@ -105,7 +96,7 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
 
         if (orientation == "null") {
             callback.invoke(orientationInt, null);
-        } else if (orientationEnabled) {
+        } else if (orientationEnabled.get()) {
             callback.invoke(null, orientation);
         }
     }
@@ -208,5 +199,29 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
     @Override
     public void onHostDestroy() {
         resolver.unregisterContentObserver(observer);
+        super.onDestroy();
+    }
+
+    /**
+     * Content observer which listens for system auto-rotate setting changes, and enables/disables
+     * the launcher rotation setting accordingly.
+     */
+    private static class SystemDisplayRotationLockObserver extends ContentObserver {
+
+        private final AtomicBoolean mOrientationEnabled;
+        private final ContentResolver mResolver;
+
+        public SystemDisplayRotationLockObserver(AtomicBoolean orientationEnabled, ContentResolver resolver) {
+            super(new Handler());
+            mOrientationEnabled = orientationEnabled;
+            mResolver = resolver;
+        }
+
+        @Override
+        public void onChange(boolean selfChange) {
+            boolean enabled = Settings.System.getInt(mResolver,Settings.System.ACCELEROMETER_ROTATION, 1) == 1;
+            FLog.d(ReactConstants.TAG, "orientation onChange: " + enabled);
+            mOrientationEnabled.set(enabled);
+        }
     }
 }
