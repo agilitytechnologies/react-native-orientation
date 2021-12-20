@@ -37,18 +37,7 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
 
     private boolean orientationEnabled = Settings.System.getInt(resolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1;
 
-    private ContentObserver observer = new ContentObserver(new Handler()) {
-        @Override
-        public void onChange(boolean selfChange) {
-            super.onChange(selfChange);
-            orientationEnabled = Settings.System.getInt(resolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1;
-        }
-
-        @Override
-        public boolean deliverSelfNotifications() {
-            return true;
-        }
-    };
+    private ContentObserver observer;
 
     public OrientationModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -71,6 +60,19 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
                 }
             }
         };
+
+        observer = new ContentObserver(new Handler()) {
+           @Override
+           public void onChange(boolean selfChange) {
+               super.onChange(selfChange);
+               orientationEnabled = Settings.System.getInt(resolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1;
+           }
+
+           @Override
+           public boolean deliverSelfNotifications() {
+               return true;
+           }
+       };
 
         resolver.registerContentObserver(
             Settings.System.getUriFor(Settings.System.ACCELEROMETER_ROTATION),
