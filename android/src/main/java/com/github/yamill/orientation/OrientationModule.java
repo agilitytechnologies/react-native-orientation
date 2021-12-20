@@ -3,12 +3,15 @@ package com.github.yamill.orientation;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.util.Log;
 import android.provider.Settings;
+import android.os.Handler;
+import android.database.ContentObserver;
 
 import com.facebook.common.logging.FLog;
 import com.facebook.react.bridge.Arguments;
@@ -29,9 +32,27 @@ import javax.annotation.Nullable;
 public class OrientationModule extends ReactContextBaseJavaModule implements LifecycleEventListener{
     final BroadcastReceiver receiver;
 
+    private Context ctx = getReactApplicationContext();
+    private ContentResolver resolver = ctx.getContentResolver();
+
+    private boolean orientationEnabled = Settings.System.getInt(resolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1;
+
+    private ContentObserver observer = new ContentObserver(new Handler()) {
+        @Override
+        public void onChange(boolean selfChange) {
+            super.onChange(selfChange);
+            orientationEnabled = Settings.System.getInt(resolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1;
+        }
+
+        @Override
+        public boolean deliverSelfNotifications() {
+            return true;
+        }
+    };
+
     public OrientationModule(ReactApplicationContext reactContext) {
         super(reactContext);
-        final ReactApplicationContext ctx = reactContext;
+        final ReactApplicationContext rCtx = reactContext;
 
         receiver = new BroadcastReceiver() {
             @Override
@@ -43,14 +64,21 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
 
                 WritableMap params = Arguments.createMap();
                 params.putString("orientation", orientationValue);
-                if (ctx.hasActiveCatalystInstance()) {
-                    ctx
+                if (rCtx.hasActiveCatalystInstance()) {
+                    rCtx
                     .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
                     .emit("orientationDidChange", params);
                 }
             }
         };
-        ctx.addLifecycleEventListener(this);
+
+        resolver.registerContentObserver(
+            Settings.System.getUriFor(Settings.System.ACCELEROMETER_ROTATION),
+            true,
+            observer
+        );
+
+        rCtx.addLifecycleEventListener(this);
     }
 
     @Override
@@ -66,7 +94,7 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
 
         if (orientation == "null") {
             callback.invoke(orientationInt, null);
-        } else if (Settings.System.getInt(getReactApplicationContext().getContentResolver(), Settings.System.ACCELEROMETER_ROTATION, 0) == 1) {
+        } else if (orientationEnabled) {
             callback.invoke(null, orientation);
         }
     }
@@ -168,6 +196,6 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
 
     @Override
     public void onHostDestroy() {
-
-        }
+        resolver.unregisterContentObserver(observer);
     }
+}
