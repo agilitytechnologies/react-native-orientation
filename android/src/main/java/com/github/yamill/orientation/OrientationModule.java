@@ -8,6 +8,7 @@ import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.util.Log;
+import android.provider.Settings;
 
 import com.facebook.common.logging.FLog;
 import com.facebook.react.bridge.Arguments;
@@ -65,7 +66,7 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
 
         if (orientation == "null") {
             callback.invoke(orientationInt, null);
-        } else if (android.provider.Settings.System.getInt(getContentResolver(), Settings.System.ACCELEROMETER_ROTATION, 0) == 1) {
+        } else if (Settings.System.getInt(getReactApplicationContext().getContentResolver(), Settings.System.ACCELEROMETER_ROTATION, 0) == 1) {
             callback.invoke(null, orientation);
         }
     }
