@@ -12,6 +12,7 @@ import android.util.Log;
 import android.provider.Settings;
 import android.os.Handler;
 import android.database.ContentObserver;
+import android.os.Looper;
 
 import com.facebook.common.logging.FLog;
 import com.facebook.react.bridge.Arguments;
@@ -61,7 +62,7 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
             }
         };
 
-        observer = new ContentObserver(new Handler()) {
+        observer = new ContentObserver(new Handler(Looper.getMainLooper())) {
            @Override
            public void onChange(boolean selfChange) {
                super.onChange(selfChange);
