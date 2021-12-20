@@ -65,7 +65,7 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
 
         if (orientation == "null") {
             callback.invoke(orientationInt, null);
-        } else {
+        } else if (android.provider.Settings.System.getInt(getContentResolver(), Settings.System.ACCELEROMETER_ROTATION, 0) == 1) {
             callback.invoke(null, orientation);
         }
     }
