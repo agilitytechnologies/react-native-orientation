@@ -13,6 +13,7 @@ import android.provider.Settings;
 import android.os.Handler;
 import android.database.ContentObserver;
 import android.os.Looper;
+import android.net.Uri;
 
 import com.facebook.common.logging.FLog;
 import com.facebook.react.bridge.Arguments;
@@ -65,8 +66,15 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
         observer = new ContentObserver(new Handler(Looper.getMainLooper())) {
            @Override
            public void onChange(boolean selfChange) {
-               super.onChange(selfChange);
-               orientationEnabled = Settings.System.getInt(resolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1;
+               this.onChange(selfChange,null);
+               FLog.e(ReactConstants.TAG, "ContentObserver onChange 1");
+           }
+
+           @Override
+           public void onChange(boolean selfChange, Uri uri) {
+               int value = Settings.System.getInt(resolver, Settings.System.ACCELEROMETER_ROTATION, 0);
+               FLog.e(ReactConstants.TAG, "ContentObserver onChange 2: " + value);
+               orientationEnabled = value == 1;
            }
 
            @Override
