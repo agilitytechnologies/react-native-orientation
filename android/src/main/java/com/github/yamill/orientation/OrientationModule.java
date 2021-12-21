@@ -72,7 +72,7 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
        // Register a content observer to listen for system setting changes while
        // this UI is active.
        resolver.registerContentObserver(
-           Settings.System.getUriFor(System.ACCELEROMETER_ROTATION),
+           Settings.System.getUriFor(Settings.System.ACCELEROMETER_ROTATION),
            false,
            observer
        );
@@ -199,7 +199,6 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
     @Override
     public void onHostDestroy() {
         resolver.unregisterContentObserver(observer);
-        super.onDestroy();
     }
 
     /**
@@ -212,15 +211,19 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
         private final ContentResolver mResolver;
 
         public SystemDisplayRotationLockObserver(AtomicBoolean orientationEnabled, ContentResolver resolver) {
-            super(new Handler());
+            super(new Handler(Looper.getMainLooper()));
             mOrientationEnabled = orientationEnabled;
             mResolver = resolver;
         }
-
         @Override
         public void onChange(boolean selfChange) {
+            this.onChange(selfChange, null);
+        }
+
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
             boolean enabled = Settings.System.getInt(mResolver,Settings.System.ACCELEROMETER_ROTATION, 1) == 1;
-            FLog.d(ReactConstants.TAG, "orientation onChange: " + enabled);
+            Log.d(this.getClass().getSimpleName(), "orientation onChange: " + enabled);
             mOrientationEnabled.set(enabled);
         }
     }
